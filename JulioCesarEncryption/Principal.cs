@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
@@ -89,7 +88,7 @@ namespace JulioCesarEncryption
 
         private static void UpdateJson(Mensagem mensagem)
         {
-            string output = JsonConvert.SerializeObject(mensagem, Formatting.None);
+            string output = JsonConvert.SerializeObject(mensagem, Formatting.Indented);
             File.WriteAllText(CAMINHO_ARQUIVO, output);
         }
 
@@ -101,6 +100,12 @@ namespace JulioCesarEncryption
             using (var formData = new MultipartFormDataContent())
             {
                 formData.Add(bytesContent, NOME_ARQUIVO, NOME_ARQUIVO);
+                formData.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment")
+                {
+                    Name = NOME_ARQUIVO,
+                    FileName = NOME_ARQUIVO + ".json"
+                };
+
                 var response = await client.PostAsync(BASE_URL + token, formData);
 
                 if (!response.IsSuccessStatusCode)
