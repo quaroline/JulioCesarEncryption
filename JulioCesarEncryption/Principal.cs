@@ -1,16 +1,20 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace JulioCesarEncryption
 {
     class Principal
     {
-        public const string CAMINHO_ARQUIVO = "../../answer.json";
+        public const string NOME_ARQUIVO = "answer";
+        public const string CAMINHO_ARQUIVO = "../../" + NOME_ARQUIVO + ".json";
+        public const string BASE_URL = "https://api.codenation.dev/v1/challenge/dev-ps/submit-solution?token=";
 
         static void Main(string[] args)
         {
@@ -20,6 +24,7 @@ namespace JulioCesarEncryption
             mensagem.ResumoCriptografico = ConvertSha1(mensagem.Decifrado, Encoding.Default);
 
             UpdateJson(mensagem);
+            UploadFile(mensagem.Token, ConvertFile());
 
             Console.ReadLine();
         }
@@ -84,8 +89,37 @@ namespace JulioCesarEncryption
 
         private static void UpdateJson(Mensagem mensagem)
         {
-            string output = JsonConvert.SerializeObject(mensagem, Formatting.Indented);
+            string output = JsonConvert.SerializeObject(mensagem, Formatting.None);
             File.WriteAllText(CAMINHO_ARQUIVO, output);
+        }
+
+        private static async Task<Stream> UploadFile(string token, byte[] fileBytes)
+        {
+            HttpContent bytesContent = new ByteArrayContent(fileBytes);
+
+            using (var client = new HttpClient())
+            using (var formData = new MultipartFormDataContent())
+            {
+                formData.Add(bytesContent, NOME_ARQUIVO, NOME_ARQUIVO);
+                var response = await client.PostAsync(BASE_URL + token, formData);
+
+                if (!response.IsSuccessStatusCode)
+                    return null;
+                return await response.Content.ReadAsStreamAsync();
+            }
+        }
+
+        private static byte[] ConvertFile()
+        {
+            using (FileStream file = new FileStream(CAMINHO_ARQUIVO, FileMode.Open, FileAccess.Read))
+            {
+                byte[] bytes = File.ReadAllBytes(CAMINHO_ARQUIVO);
+
+                file.Read(bytes, 0, Convert.ToInt32(file.Length));
+                file.Close();
+
+                return bytes;
+            }
         }
     }
 
